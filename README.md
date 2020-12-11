@@ -1,0 +1,1 @@
+# aws-short-projects
