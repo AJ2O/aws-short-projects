@@ -1,0 +1,579 @@
+---
+# Template Anatomy: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: 
+  Creates a VPC with 3 availability zones, with public and private subnets in each (up to the user).
+  Launches public EC2 instances that are web servers.
+  Launches a private EC2 instance that can connect to the Internet via NAT Gateway.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: EC2 Configuration
+        Parameters:
+          - InstanceTypeParameter
+          - SSHKeyPairParameter
+      - Label:
+          default: VPC Configuration
+        Parameters:
+          - UsePublicSubnetsParameter
+          - UsePrivateSubnetsParameter
+          - PersonalIPParameter
+
+Parameters:
+
+  # EC2 Parameters
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    Description: The instance type of the EC2 instances. Choose t2.micro, t2.small, or t2.medium.
+  SSHKeyPairParameter:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: The SSH Key Pair needed to SSH into the EC2 instances.
+  
+  
+  # VPC Parameters
+  UsePublicSubnetsParameter:
+    Type: String
+    Default: True
+    AllowedValues:
+      - True
+      - False
+    Description: If False, public subnets will not be created, and neither will public EC2 instances.
+  UsePrivateSubnetsParameter:
+    Type: String
+    Default: True
+    AllowedValues:
+      - True
+      - False
+    Description: If False, private subnets will not be created, and neither will private EC2 instances nor the NAT Gateway.
+  PersonalIPParameter:
+    Type: String
+    Default: 0.0.0.0
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(\.(?!$)|$)){4}$
+    Description: Enter your device's IP address. Only this address will be able to SSH into the instances in the VPC.
+    ConstraintDescription: Please enter a valid IP address.
+    
+# Mapping instance types to AMIs based on region
+Mappings:
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+  AWSInstanceType2NATArch:
+    t2.micro:
+      Arch: NATHVM64
+    t2.small:
+      Arch: NATHVM64
+    t2.medium:
+      Arch: NATHVM64
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-0080e4c5bc078760e
+      HVMG2: ami-0aeb704d503081ea6
+    us-west-2:
+      HVM64: ami-01e24be29428c15b2
+      HVMG2: ami-0fe84a5b4563d8f27
+    us-west-1:
+      HVM64: ami-0ec6517f6edbf8044
+      HVMG2: ami-0a7fc72dc0e51aa77
+    eu-west-1:
+      HVM64: ami-08935252a36e25f85
+      HVMG2: ami-0d5299b1c6112c3c7
+    eu-west-2:
+      HVM64: ami-01419b804382064e4
+      HVMG2: NOT_SUPPORTED
+    eu-west-3:
+      HVM64: ami-0dd7e7ed60da8fb83
+      HVMG2: NOT_SUPPORTED
+    eu-central-1:
+      HVM64: ami-0cfbf4f6db41068ac
+      HVMG2: ami-0aa1822e3eb913a11
+    eu-north-1:
+      HVM64: ami-86fe70f8
+      HVMG2: ami-32d55b4c
+    ap-northeast-1:
+      HVM64: ami-00a5245b4816c38e6
+      HVMG2: ami-09d0e0e099ecabba2
+    ap-northeast-2:
+      HVM64: ami-00dc207f8ba6dc919
+      HVMG2: NOT_SUPPORTED
+    ap-northeast-3:
+      HVM64: ami-0b65f69a5c11f3522
+      HVMG2: NOT_SUPPORTED
+    ap-southeast-1:
+      HVM64: ami-05b3bcf7f311194b3
+      HVMG2: ami-0e46ce0d6a87dc979
+    ap-southeast-2:
+      HVM64: ami-02fd0b06f06d93dfc
+      HVMG2: ami-0c0ab057a101d8ff2
+    ap-south-1:
+      HVM64: ami-0ad42f4f66f6c1cc9
+      HVMG2: ami-0244c1d42815af84a
+    us-east-2:
+      HVM64: ami-0cd3dfa4e37921605
+      HVMG2: NOT_SUPPORTED
+    ca-central-1:
+      HVM64: ami-07423fb63ea0a0930
+      HVMG2: NOT_SUPPORTED
+    sa-east-1:
+      HVM64: ami-05145e0b28ad8e0b2
+      HVMG2: NOT_SUPPORTED
+    cn-north-1:
+      HVM64: ami-053617c9d818c1189
+      HVMG2: NOT_SUPPORTED
+    cn-northwest-1:
+      HVM64: ami-0f7937761741dc640
+      HVMG2: NOT_SUPPORTED
+
+Conditions:
+  UsePublicSubnetsCondition: !Equals [ !Ref UsePublicSubnetsParameter, True ]
+  UsePrivateSubnetsCondition: !Equals [ !Ref UsePrivateSubnetsParameter, True ]
+
+# Transforms section not used in this template.
+#Transforms:
+
+Resources:
+  # Follow steps of VPC By Hand
+  
+  # 1. Create VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      InstanceTenancy: default
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  
+  # 2. Create Internet Gateway
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+  
+  # 3. Create Subnets in each AZ for the new VPC
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Condition: UsePublicSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      # Can't nest short form functions consecutively. The bottom two are equivalent:
+      # AvailabilityZone: !Select
+      #  - 0, 
+      #  - Fn::GetAZs: !Ref AWS::Region
+      #
+      # AvailabilityZone: !Select
+      #  - 0
+      #  - !GetAZs
+      #  - Ref: AWS::Region
+      #
+      AvailabilityZone: !Select
+        - 0, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.0.0/24 
+      MapPublicIpOnLaunch: True
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Condition: UsePublicSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 1, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.2.0/24 
+      MapPublicIpOnLaunch: True
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Condition: UsePublicSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 2, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.4.0/24 
+      MapPublicIpOnLaunch: True
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Condition: UsePrivateSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 0, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.1.0/26 
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Condition: UsePrivateSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 1, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.3.0/26 
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Condition: UsePrivateSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 2, 
+        - Fn::GetAZs: !Ref AWS::Region
+      CidrBlock: 10.0.5.0/26 
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+
+  # 4. Route Tables for the new VPC
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: UsePublicSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  RouteTableAssociationPublicA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+  RouteTableAssociationPublicB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+  RouteTableAssociationPublicC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetC
+  RouteTableAssociationIGW:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref PublicRouteTable
+  RouteToIGW:
+    Type: AWS::EC2::Route
+    # DependsOn requirement from here: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-dependson.html#gatewayattachment
+    DependsOn: IGW
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: UsePrivateSubnetsCondition
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  RouteAssociationPrivateA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetA
+  RouteAssociationPrivateB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetB
+  RouteAssociationPrivateC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetC
+  
+  # 5. Create NAT Gateway and attach to the Private Route Table
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    # DependsOn requirement from here: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-dependson.html#gatewayattachment
+    DependsOn: IGWAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  RouteToNAT:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+      RouteTableId: !Ref PrivateRouteTable
+
+  # 6. NACLs for the new VPC
+  NACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  
+  NACLInboundSSHPersonal:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 100
+      Protocol: 6
+      RuleAction: Allow
+      CidrBlock: !Join
+        - ''
+        - - !Ref PersonalIPParameter
+          - /32
+      PortRange:
+        From: 22
+        To: 22
+  NACLInboundSSHVPC:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 101
+      Protocol: 6
+      RuleAction: Allow
+      CidrBlock: !GetAtt VPC.CidrBlock
+      PortRange:
+        From: 22
+        To: 22
+  NACLInboundHTTP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 200
+      Protocol: 6
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 80
+        To: 80
+  NACLInboundHTTPS:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 300
+      Protocol: 6
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 443
+        To: 443
+  NACLInboundEphemeral:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 400
+      Protocol: 6
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 1024
+        To: 65535
+  
+  NACLOutboundSSHPersonal:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 100
+      Protocol: 6
+      Egress: True
+      RuleAction: Allow
+      CidrBlock: !Join
+        - ''
+        - - !Ref PersonalIPParameter
+          - /32
+      PortRange:
+        From: 22
+        To: 22
+  NACLOutboundSSHVPC:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 101
+      Protocol: 6
+      Egress: True
+      RuleAction: Allow
+      CidrBlock: !GetAtt VPC.CidrBlock
+      PortRange:
+        From: 22
+        To: 22
+  NACLOutboundHTTP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 200
+      Protocol: 6
+      Egress: True
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 80
+        To: 80
+  NACLOutboundHTTPS:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 300
+      Protocol: 6
+      Egress: True
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 443
+        To: 443
+  NACLInboundEphemeral:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAcl: !Ref NACL
+      RuleNumber: 400
+      Protocol: 6
+      Egress: True
+      RuleAction: Allow
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 1024
+        To: 65535
+
+  # 7. Security Groups
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Allows inbound SSH and HTTP/S.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+  PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Allows inbound SSH and HTTP/S.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref PublicSecurityGroup
+
+  # 8. Launch Instance in Public Subnet
+  EC2InstancePublic:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !GetAtt PublicSubnetA.AvailabilityZone
+      SubnetId: !Ref PublicSubnetA
+      InstanceType: !Ref InstanceTypeParameter
+      KeyName: !Ref SSHKeyPairParameter
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroup
+      ImageId: !FindInMap 
+        - AWSRegionArch2AMI   # KeyName
+        - !Ref 'AWS::Region'  # Key
+        # Nested map
+        - !FindInMap          # Value
+          - AWSInstanceType2Arch
+          - !Ref InstanceType
+          - Arch
+      UserData:
+        !Base64 |
+        #!/bin/bash
+        yum update -y
+        yum install -y httpd
+        cd /var/www/html
+        echo "<html><h1>This is a test web-server</h1></html>" > index.html
+        service httpd start
+        chkconfig httpd onyum update -y
+        yum install -y httpd
+        cd /var/www/html
+        echo "<html><h1>This is a test web-server</h1></html>" > index.html
+        service httpd start
+        chkconfig httpd on
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+  
+  # 9. Launch Instance in Private Subnet
+  EC2InstancePrivate:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !GetAtt PrivateSubnetC.AvailabilityZone
+      SubnetId: !Ref PrivateSubnetC
+      InstanceType: !Ref InstanceTypeParameter
+      KeyName: !Ref SSHKeyPairParameter
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroup
+      ImageId: !FindInMap 
+        - AWSRegionArch2AMI   # KeyName
+        - !Ref 'AWS::Region'  # Key
+        # Nested map
+        - !FindInMap          # Value
+          - AWSInstanceType2Arch
+          - !Ref InstanceType
+          - Arch
+      UserData:
+        !Base64 |
+        #!/bin/bash
+        yum update -y > /tmp/update.log
+      Tags:
+        - Key: Project
+          Value: VPC By CloudFormation
+        
+Outputs:
+  # 10. Complete / Verification
+  WebServerIP:
+    Description: The public web server IP address. 
+    Value: !GetAtt EC2InstancePublic.PublicIp
+    Condition: UsePublicSubnetsCondition
+  PrivateServerIP:
+    Description: The private web server IP address.
+    Value: !GetAtt EC2InstancePrivate.PrivateServerIP
+    Condition: UsePrivateSubnetsCondition
