@@ -5,8 +5,9 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Description: 
   Creates a VPC with 3 availability zones, with public and private subnets in each (up to the user).
-  Launches public EC2 instances that are web servers.
+  Launches a public EC2 instance that is a web server.
   Launches a private EC2 instance that can connect to the Internet via NAT Gateway.
+  Average Time - 5 Minutes
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -280,11 +281,6 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnetC
-  RouteTableAssociationIGW:
-    Type: AWS::EC2::GatewayRouteTableAssociation
-    Properties:
-      GatewayId: !Ref IGW
-      RouteTableId: !Ref PublicRouteTable
   RouteToIGW:
     Type: AWS::EC2::Route
     # DependsOn requirement from here: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-dependson.html#gatewayattachment
@@ -355,7 +351,7 @@ Resources:
   NACLInboundSSHPersonal:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 100
       Protocol: 6
       RuleAction: Allow
@@ -369,7 +365,7 @@ Resources:
   NACLInboundSSHVPC:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 101
       Protocol: 6
       RuleAction: Allow
@@ -380,7 +376,7 @@ Resources:
   NACLInboundHTTP:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 200
       Protocol: 6
       RuleAction: Allow
@@ -391,7 +387,7 @@ Resources:
   NACLInboundHTTPS:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 300
       Protocol: 6
       RuleAction: Allow
@@ -402,7 +398,7 @@ Resources:
   NACLInboundEphemeral:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 400
       Protocol: 6
       RuleAction: Allow
@@ -414,7 +410,7 @@ Resources:
   NACLOutboundSSHPersonal:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 100
       Protocol: 6
       Egress: True
@@ -429,7 +425,7 @@ Resources:
   NACLOutboundSSHVPC:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 101
       Protocol: 6
       Egress: True
@@ -441,7 +437,7 @@ Resources:
   NACLOutboundHTTP:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 200
       Protocol: 6
       Egress: True
@@ -453,7 +449,7 @@ Resources:
   NACLOutboundHTTPS:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 300
       Protocol: 6
       Egress: True
@@ -465,7 +461,7 @@ Resources:
   NACLInboundEphemeral:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      NetworkAcl: !Ref NACL
+      NetworkAclId: !Ref NACL
       RuleNumber: 400
       Protocol: 6
       Egress: True
@@ -508,6 +504,10 @@ Resources:
   # 8. Launch Instance in Public Subnet
   EC2InstancePublic:
     Type: AWS::EC2::Instance
+    DependsOn:
+      - RouteTableAssociationPublicA
+      - RouteTableAssociationPublicB
+      - RouteTableAssociationPublicC
     Properties:
       AvailabilityZone: !GetAtt PublicSubnetA.AvailabilityZone
       SubnetId: !Ref PublicSubnetA
@@ -544,6 +544,7 @@ Resources:
   # 9. Launch Instance in Private Subnet
   EC2InstancePrivate:
     Type: AWS::EC2::Instance
+    DependsOn: RouteToNAT
     Properties:
       AvailabilityZone: !GetAtt PrivateSubnetC.AvailabilityZone
       SubnetId: !Ref PrivateSubnetC
@@ -569,9 +570,12 @@ Resources:
         
 Outputs:
   # 10. Complete / Verification
-  WebServerIP:
-    Description: The public web server IP address. 
-    Value: !GetAtt EC2InstancePublic.PublicIp
+  WebServerURL:
+    Description: The website URL. 
+    Value: !Join
+        - ''
+        - - http://
+          - !GetAtt EC2InstancePublic.PublicIp
     Condition: UsePublicSubnetsCondition
   PrivateServerIP:
     Description: The private web server IP address.
