@@ -186,7 +186,7 @@ Resources:
       #  - Ref: AWS::Region
       #
       AvailabilityZone: !Select
-        - 0, 
+        - 0
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.0.0/24 
       MapPublicIpOnLaunch: True
@@ -199,7 +199,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select
-        - 1, 
+        - 1
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.2.0/24 
       MapPublicIpOnLaunch: True
@@ -212,7 +212,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select
-        - 2, 
+        - 2
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.4.0/24 
       MapPublicIpOnLaunch: True
@@ -225,7 +225,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select
-        - 0, 
+        - 0
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.1.0/26 
       Tags:
@@ -237,7 +237,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select
-        - 1, 
+        - 1
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.3.0/26 
       Tags:
@@ -249,7 +249,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select
-        - 2, 
+        - 2
         - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.0.5.0/26 
       Tags:
@@ -521,7 +521,7 @@ Resources:
         # Nested map
         - !FindInMap          # Value
           - AWSInstanceType2Arch
-          - !Ref InstanceType
+          - !Ref InstanceTypeParameter
           - Arch
       UserData:
         !Base64 |
@@ -557,7 +557,7 @@ Resources:
         # Nested map
         - !FindInMap          # Value
           - AWSInstanceType2Arch
-          - !Ref InstanceType
+          - !Ref InstanceTypeParameter
           - Arch
       UserData:
         !Base64 |
@@ -575,5 +575,5 @@ Outputs:
     Condition: UsePublicSubnetsCondition
   PrivateServerIP:
     Description: The private web server IP address.
-    Value: !GetAtt EC2InstancePrivate.PrivateServerIP
+    Value: !GetAtt EC2InstancePrivate.PrivateIp
     Condition: UsePrivateSubnetsCondition
