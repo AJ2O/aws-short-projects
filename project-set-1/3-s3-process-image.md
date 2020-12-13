@@ -14,9 +14,10 @@
 
 ## Services Used
 - [S3](https://docs.aws.amazon.com/AmazonS3/latest/dev/Welcome.html)
-  - [Python SDK Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html)
+  - [AWS Python SDK for S3](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html)
 - [Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html)
   - [Using Lambda with S3](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
+  - [Lambda Layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html)
 
 ## Steps
 
@@ -67,8 +68,11 @@
 ```
 
 ## Notes
+- S3 API calls are asynchronous, so they are handled with `async` Python calls
+  - [Asynchronous AWS Invocations](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html)
+- We needed to use Lambda Layers because Pillow doesn't come with Python, so we needed a way to access that library
 - For a real use case, this app could be part of larger media platform such YouTube, Netflix, etc.
-- When uploading a video, the user can choose their video thumbnail
-- The source image would be stored in the main bucket, and be Infrequently-Accessed because we use thumbnails for every video
-- The target image would be stored in a huge thumbnail bucket, and be Standard class because we serve these images constantly
-- We could instantly format thumbnails for our platform for every video uploaded
+  - When uploading a video, the user can choose their video thumbnail
+  - The source image would be stored in the main bucket, and be Infrequently-Accessed because we use thumbnails for every video
+  - The target image would be stored in a huge thumbnail bucket, and be Standard class because we serve these images constantly
+  - We could instantly format thumbnails for our platform for every video uploaded
