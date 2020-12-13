@@ -13,7 +13,7 @@
 
 ## Steps
 
-### . Create SQS Lambda Function
+### 1. Create SQS Lambda Function
 - This will be the Lambda function that populates the SQS queue
 - Runtime: Python 3.8
 - Copy-paste the code below:
@@ -45,7 +45,7 @@ def lambda_handler(event, context):
             break
 ```
 
-### . SQS Lambda IAM Permissions
+### 2. SQS Lambda IAM Permissions
 - For the SQS Lambda function, on the permissions tab, select the created IAM role (or create one if you haven't already)
 - Create and attach this IAM policy to the role to allow this function to send SQS messages:
 ```
@@ -64,7 +64,7 @@ def lambda_handler(event, context):
 ```
 - [SQS API Permissions](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-api-permissions-reference.html)
 
-### . Create SNS Lambda Function
+### 3. Create SNS Lambda Function
 - This will be the function that sends the alarm notifications via SNS
 - Select Python 3.x (latest)
 - Create
@@ -111,7 +111,7 @@ def lambda_handler(event, context):
     return { "status" : "fail" }
 ```
 
-### . SNS Lambda IAM Permissions
+### 4. SNS Lambda IAM Permissions
 - For the Lambda function, on the permissions tab, select the created IAM role (or create one if you haven't already)
 - Create and attach this IAM policy to the role to allow this function to publish SNS messages:
 ```
@@ -145,7 +145,7 @@ def lambda_handler(event, context):
 ```
 - [SNS API Permissions](https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html)
 
-### . Create Stop Lambda Function
+### 5. Create Stop Lambda Function
 - This will be the Lambda function that stops the sending of notifications
 - Runtime: Python 3.8
 - Copy-paste the code below:
@@ -186,13 +186,13 @@ def lambda_handler(event, context):
 }
 ```
 
-### . Create SQS Queue
+### 6. Create SQS Queue
 - Create Queue
 - Type: Standard
 - Message Retention: 30 minutes (or however long you desire)
   - Shouldn't be longer than a day since it is just an alarm
 
-### . Create SNS Topic
+### 7. Create SNS Topic
 - Topic Type: Standard
   - FIFO queue not required
   - Can use many more types of subscription protocols:
@@ -203,20 +203,20 @@ def lambda_handler(event, context):
 - Display Name: Alarm-Clock
 - [Publish SNS Message Documentation](https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-topic.html#sms_publish-to-topic_console)
     
-### . Create SNS Subscriptions
+### 8. Create SNS Subscriptions
 - Topic: Created in previous step
 - Protocol: SMS
 - Phone Number: Your Phone Number
 - Finish, and add any other subscriptions if you want
 - [Subscriptions Documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-create-subscribe-endpoint-to-topic.html)
 
-### . Test SNS Publishing
+### 9. Test SNS Publishing
 - Select your topic and click "Publish Message"
 - Message Structure: Identical Payload
 - Message Body: "This is a test message for the alarm clock"
 - Publish, and you should receive the message on your device(s)
 
-### . Create Step Functions Application
+### 10. Create Step Functions Application
 - Copy-paste the code below for the function definition replacing:
   - <queue-URL> with the URL for the SQS queue created earlier
   - <topic-arn> with the ARN for the SNS topic created earlier
@@ -278,7 +278,7 @@ def lambda_handler(event, context):
 ```
 - [Step Functions Processing](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
 
-### . Step Functions Permissions
+### 11. Step Functions Permissions
 - Edit the Step Functions role, and edit the policy to be like below so that it can execute the Lambda functions:
 ```
 {
@@ -300,7 +300,7 @@ def lambda_handler(event, context):
 }
 ```
 
-### . Manually Test App
+### 12. Manually Test App
 - Start an execution with the JSON input as below: 
 ```
 {
@@ -310,7 +310,7 @@ def lambda_handler(event, context):
 - You should get notified 5 times over the course of 5 minutes
 - During this time, you can try out the Stop Lambda function to stop notifications
 
-### . Create EventBridge event
+### 13. Create EventBridge event
 - This event is what will trigger the Lambda function on a schedule
 - Create rule
 - Pattern: Scheduled
@@ -328,7 +328,7 @@ def lambda_handler(event, context):
   - [EventBridge Targets Documentation](https://docs.aws.amazon.com/eventbridge/latest/userguide/eventbridge-targets.html)
 
 
-### . Complete
+### 14. Complete
 - With the trigger enabled, the notification will run automatically according to your cron expression
 
 ## Notes
