@@ -128,6 +128,21 @@ def lambda_handler(event, context):
     ]
 }
 ```
+- Create and attach this IAM policy to allow this function to receive SQS messages:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:ReceiveMessage"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
 - [SNS API Permissions](https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html)
 
 
@@ -220,6 +235,38 @@ def lambda_handler(event, context):
 ```
 - [Step Functions Processing](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
 
+### . Step Functions Permissions
+- Edit the Step Functions role, and edit the policy to be like below so that it can execute the Lambda functions:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "<SNS-Lambda-arn>",
+                "<SQS-Lambda-arn>",
+                "<SNS-Lambda-arn>:*",
+                "<SQS-Lambda-arn>:*"
+            ]
+        }
+    ]
+}
+```
+
+### . Manually Test App
+- Start an execution with the JSON input as below: 
+```
+{
+  "count": "5"
+}
+```
+- You should get notified 5 times over the course of 5 minutes
+- During this time, you can execute the Stop Lambda function to stop notifications
+
 ### . Create EventBridge event
 - This event is what will trigger the Lambda function on a schedule
 - Create rule
@@ -230,27 +277,19 @@ def lambda_handler(event, context):
   - Ex: Every weekday at 5AM EST - `0 5 ? * MON-FRI *`
   - [Cron Expressions Documentation](https://docs.aws.amazon.com/eventbridge/latest/userguide/scheduled-events.html#cron-expressions)
 - Select Targets
-  - Add the Lambda function created earlier
+  - Add the Step Functions app created earlier
   - Configure Inputs
     - Select Constant (JSON text)
-    - Copy the below snippet into the text box, and replace <topic-arn> with the ARN from the topic created earlier
-    - `{ "topicArn" : "<topic-arn>" }`
+    - Copy the below snippet into the text box, with however long you want to get notifications
+    - `{ "count" : "15" }`
   - [EventBridge Targets Documentation](https://docs.aws.amazon.com/eventbridge/latest/userguide/eventbridge-targets.html)
 
-### 7. Test Lambda Function
-- Create a test event with the following JSON, replacing the topic arn: 
-```
-{
-  "topicArn": "<topic-arn>"
-}
-```
-- Execute the test, and you should get notified
 
-### 8. Complete
+### . Complete
 - With the trigger enabled, the notification will run automatically according to your cron expression
 
 ## Notes
-- SMS subscriptions may stop working after a while due to [Amazon's SMS quota](https://aws.amazon.com/premiumsupport/knowledge-center/sns-sms-spending-limit-increase/)
-  - Will start working again in the next month
+- SMS subscriptions may stop working after a while due to [Amazon's SMS monhtly quota](https://aws.amazon.com/premiumsupport/knowledge-center/sns-sms-spending-limit-increase/)
+- There are many ways to build this kind of app, but this method makes extreme use of decoupling app components
 
 
