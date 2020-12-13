@@ -27,7 +27,7 @@ sqsClient = boto3.client('sqs')
 def lambda_handler(event, context):
     
     # get the queue URL
-    queueURL = event["queue"]
+    queueURL = event["queueURL"]
     count = int(event["count"])
     
     # construct the message
@@ -38,7 +38,7 @@ def lambda_handler(event, context):
         try:
             response = sqsClient.send_message(
                 QueueUrl=queueURL,
-                MessageBody=message + "(x" + str(curMessage) + ")"
+                MessageBody=message
             )
         except:
             print("The message failed to queue!")
@@ -81,7 +81,7 @@ def lambda_handler(event, context):
     
     # get the topic arn from the event
     topicArn = event["topicArn"]
-    queueURL = event["queue"]
+    queueURL = event["queueURL"]
     
     # get message from SQS queue
     subject = "Lambda Alarm Clock"
@@ -145,9 +145,52 @@ def lambda_handler(event, context):
 ```
 - [SNS API Permissions](https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html)
 
+### . Create Stop Lambda Function
+- This will be the Lambda function that stops the sending of notifications
+- Runtime: Python 3.8
+- Copy-paste the code below:
+```
+# boto3 is the AWS SDK for Python
+import boto3
+
+# connect to the SQS service/client
+sqsClient = boto3.client('sqs')
+
+def lambda_handler(event, context):
+    
+    # get the queue URL
+    queueURL = event["queueURL"]
+    
+    # purge the queue
+    try:
+        response = sqsClient.purge_queue(QueueUrl=queueURL)
+    except:
+        print("The message queue couldn't be emptied!")
+```
+
+### . Stop Lambda IAM Permissions
+- For the Stop Lambda function, on the permissions tab, select the created IAM role (or create one if you haven't already)
+- Create and attach this IAM policy to the role to allow this function to purge SQS messages:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:PurgeQueue"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 ### . Create SQS Queue
-
+- Create Queue
+- Type: Standard
+- Message Retention: 30 minutes (or however long you desire)
+  - Shouldn't be longer than a day since it is just an alarm
 
 ### . Create SNS Topic
 - Topic Type: Standard
@@ -174,7 +217,11 @@ def lambda_handler(event, context):
 - Publish, and you should receive the message on your device(s)
 
 ### . Create Step Functions Application
-- Copy-paste the code below for the function definition:
+- Copy-paste the code below for the function definition replacing:
+  - <queue-URL> with the URL for the SQS queue created earlier
+  - <topic-arn> with the ARN for the SNS topic created earlier
+  - <SNS-Lambda-arn> with the ARN for the notification Lambda
+  - <SQS-Lambda-arn> with the ARN for the SQS Lambda
 ```
 {
   "Comment": "An Alarm Clock App using State Machines",
@@ -186,10 +233,8 @@ def lambda_handler(event, context):
       "Parameters": {
         "FunctionName": "<SQS-Lambda-arn>",
         "Payload": {
-          "Input": {
-            "queueURL": "<queue-URL>",
-            "count": "$.count"
-          }
+          "queueURL": "<queue-URL>",
+          "count": "$.count"
         }
       },
       "Next": "Send Notification"
@@ -200,10 +245,8 @@ def lambda_handler(event, context):
       "Parameters": {
         "FunctionName": "<SNS-Lambda-arn>",
         "Payload": {
-          "Input": {
-            "topicArn": "<topic-arn>",
-            "queueURL": "<queue-URL>"
-          }
+          "topicArn": "<topic-arn>",
+          "queueURL": "<queue-URL>"
         }
       },
       "ResultPath" : "$",
@@ -265,7 +308,7 @@ def lambda_handler(event, context):
 }
 ```
 - You should get notified 5 times over the course of 5 minutes
-- During this time, you can execute the Stop Lambda function to stop notifications
+- During this time, you can try out the Stop Lambda function to stop notifications
 
 ### . Create EventBridge event
 - This event is what will trigger the Lambda function on a schedule
@@ -289,7 +332,7 @@ def lambda_handler(event, context):
 - With the trigger enabled, the notification will run automatically according to your cron expression
 
 ## Notes
-- SMS subscriptions may stop working after a while due to [Amazon's SMS monhtly quota](https://aws.amazon.com/premiumsupport/knowledge-center/sns-sms-spending-limit-increase/)
+- SMS subscriptions may stop working after a while due to [Amazon's SMS monthly quota](https://aws.amazon.com/premiumsupport/knowledge-center/sns-sms-spending-limit-increase/)
 - There are many ways to build this kind of app, but this method makes extreme use of decoupling app components
 
 
