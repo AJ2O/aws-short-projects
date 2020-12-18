@@ -1,6 +1,9 @@
 # Create a Virtual Private Cloud By Hand
 - **[VPC Documentation For Reference](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)**
-## Features
+## Description
+- Services Used:
+  - [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
+  - [EC2 - Linux Instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html)
 - Create a typical VPC without the VPC wizard
 - 3 Availability Zones (AZs)
 - Public and Private subnet in each AZ
