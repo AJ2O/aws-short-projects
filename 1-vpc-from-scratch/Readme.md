@@ -1,5 +1,4 @@
 # Create a Virtual Private Cloud By Hand
-- **[VPC Documentation For Reference](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)**
 ## Description
 - Services Used:
   - [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
