@@ -1,6 +1,6 @@
 <html>
-	<head>
-		<script>
+    <head>
+        <script>
             var randomService;
             var serviceList = [];
 
@@ -34,7 +34,7 @@
                 document.getElementById("results").innerHTML = spinService["Service"];
             }
 
-			function spinToRandomService() {
+            function spinToRandomService() {
                 // disable the button while the call is being made
                 document.getElementById("spinButton").disabled = true;
 
@@ -63,20 +63,20 @@
                 };
                 
                 // send the HTTP request to the API's invocation URL
-				xhttp.open("GET", "<api-gateway-url>", true);
-				xhttp.send();
-			}
-		</script>
-	</head>
+                xhttp.open("GET", "<api-gateway-url>", true);
+                xhttp.send();
+            }
+        </script>
+    </head>
 <body>
-	<div align="center">
+    <div align="center">
         <h1> <span id="title">Spin the Service Roulette!</span> </h1>
         <p>
             <h2><span id="results">What will it be?</span></h2>
             <span id="documentation"></span>
         </p>
-		<button id="spinButton" onclick="spinToRandomService()">Spin The Wheel</button>	
-	</div>
+        <button id="spinButton" onclick="spinToRandomService()">Spin The Wheel</button>	
+    </div>
 
-	</body>
+    </body>
 </html>
