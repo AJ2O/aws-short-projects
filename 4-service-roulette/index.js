@@ -1,8 +1,8 @@
 const AWS = require("aws-sdk");
 
 // construct DynamoDB connection
-const dynamoDB = new AWS.DynamoDB.DocumentClient({ region: 'us-east-1', apiVersion: '2012-08-10' });
-const tableName = "Project-ServiceCatalog";
+const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const tableName = "ServiceCatalog";
 
 exports.handler =  (event, context, callback) => {
     // set the scan parameters
