@@ -1,0 +1,82 @@
+<html>
+	<head>
+		<script>
+            var randomService;
+            var serviceList = [];
+
+            function spinWheel(spinsLeft) {
+                var spinService;
+
+                // keep spinning if spins are left
+                if (spinsLeft > 0){
+                    // set the wheel to spin again
+                    setTimeout(function() { 
+                        spinWheel(spinsLeft - 1) 
+                    }, 125);
+                    
+                    // set the service to show
+                    spinService = serviceList[Math.floor(Math.random()*serviceList.length)];
+                }
+                // stop on the real service
+                else {
+                    // set the real service to show
+                    spinService = randomService;
+                    
+                    // show the documentation
+                    document.getElementById("documentation").innerHTML = 
+                        '<a href=\"' + spinService["Documentation"] + '\">Documentation</a>';
+
+                    // re-enable the spin button
+                    document.getElementById("spinButton").disabled = false;
+                }
+
+                // show the service
+                document.getElementById("results").innerHTML = spinService["Service"];
+            }
+
+			function spinToRandomService() {
+                // disable the button while the call is being made
+                document.getElementById("spinButton").disabled = true;
+
+                // construct the HTTP request
+                var xhttp = new XMLHttpRequest();
+                
+                // callback once a response is received
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+                        var response = JSON.parse(this.responseText);
+                        console.log(response);
+                        console.log(this.response);
+
+                        // get the service list and randomly selected service
+                        serviceList = response["body"]["serviceList"];
+                        randomService = response["body"]["randomService"]
+
+                        if (serviceList.length > 0){
+                            spinWheel(40)
+                        }
+                        else {
+                            document.getElementById("results").innerHTML = 
+                                "Seems like the wheel isn't working. Try again later!";
+                        }
+					}
+                };
+                
+                // send the HTTP request to the API's invocation URL
+				xhttp.open("GET", "<api-gateway-url>", true);
+				xhttp.send();
+			}
+		</script>
+	</head>
+<body>
+	<div align="center">
+        <h1> <span id="title">Spin the Service Roulette!</span> </h1>
+        <p>
+            <h2><span id="results">What will it be?</span></h2>
+            <span id="documentation"></span>
+        </p>
+		<button id="spinButton" onclick="spinToRandomService()">Spin The Wheel</button>	
+	</div>
+
+	</body>
+</html>
