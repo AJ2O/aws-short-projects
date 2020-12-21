@@ -22,4 +22,4 @@ The GitHub link for the app itself is [here](https://github.com/AJ2O/golang-note
 The 3 sets of deployment tools explored in this tutorial are:
 1. Elastic Beanstalk
 2. ECR & ECS
-3. CodeBuild, CodeDeploy, & CodePipeline
+3. CodeBuild & CodePipeline
