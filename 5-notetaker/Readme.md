@@ -20,5 +20,5 @@ The GitHub link for the app itself is [here](https://github.com/AJ2O/golang-note
 ## Deployment Methods
 The 3 different deployment methods explored in this tutorial are:
 1. Elastic Beanstalk
-2. Elastic Container Registry
-3. EC2, CodeDeploy & CodePipeline
+2. ECR, ECS
+3. CodeBuild, CodeDeploy & CodePipeline

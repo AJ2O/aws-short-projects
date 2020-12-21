@@ -1,5 +1,5 @@
 # Elastic Beanstalk
-- This tutorial will outline how to deploy and upgrade apps using Elastic Beanstalk. All of these steps were performed in the region us-east-1.
+This tutorial will outline how to deploy and upgrade apps using Elastic Beanstalk, AWS' Platform-as-a-Service (PaaS) solution. All of these steps were performed in the region us-east-1.
 
 ## Steps
 
@@ -72,6 +72,7 @@ AmazonDynamoDBFullAccess
 - Login, and the home page will have a changed CSS style from before
 
 ## Notes
+- Terminate the environment after completion so that you will not incur charges
 - Elastic Beanstalk makes it easy to upload application code and get it running quickly on AWS
   - Just be sure that the application conforms to how [Elastic Beanstalk handles different platforms](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts-all-platforms.html)
 - It's easy to maintain multiple versions and multiple environments for each application
